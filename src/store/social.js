@@ -38,7 +38,6 @@ export const useSocialStore = defineStore("social", {
             try {
                 const response = await axios.get(`/api/posts?page=${this.postsPage}`);
                 const newPosts = response.data.posts.data;
-                console.log('posts', response.data)
                 if (newPosts.length) {
                     this.socialPosts = this.socialPosts.concat(newPosts);
                     this.postsPage++;

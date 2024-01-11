@@ -58,8 +58,8 @@
                                 <span>{{ getInitials(message) }}</span>
                             </v-avatar>
                             <div class="pl-2">
-                                <div class="font-semibold text-xs">{{ message.user.name }}</div>
-                                <div class="text-xs text-gray-400">{{ message.user.email }}</div>
+                                <div class="font-semibold text-xs">{{ message.sender ? message.sender.name : message.user.name }}</div>
+                                <div class="text-xs text-gray-400">{{ message.sender ? message.sender.email : message.user.email }}</div>
                             </div>
                         </div>
                     </template>
@@ -108,6 +108,8 @@
                     variant="underlined"
                     label="Type a message"
                     @keyup.enter="sendMessage"
+                    append-inner-icon="mdi-send"
+                    @click:append-inner="sendMessage"
                     hide-details
                 ></v-text-field>
                 <div class="flex mt-2">
@@ -152,6 +154,10 @@ const currentGroupId = computed(() => {
     return groupStore.groupId
 })
 
+const recipient = computed(() => {
+    return groupStore.recipientData
+})
+
 const allLoaded = computed(() => {
     return groupStore.allLoaded
 })
@@ -186,8 +192,19 @@ watch(() => newAddedMEssage.value, (value) =>{
 })
 
 const profileImagePath = (data) => {
-    if(data.user.profile && data.user.profile.profile_photo){
-        return BASE_IMAGE_URL + data.user.profile.profile_photo;
+    console.log(data)
+    if(data.sender){
+        if(data.sender.profile.profile_photo){
+            return BASE_IMAGE_URL + data.sender.profile.profile_photo;
+        }else{
+            return null
+        }
+    }else if(data.user.profile){
+        if(data.user.profile.profile_photo){
+            return BASE_IMAGE_URL + data.user.profile.profile_photo;
+        }else{
+            return null
+        }
     }else{
         return null
     }
@@ -206,7 +223,11 @@ const shouldDisplayUserInfo = (index) => {
 }
 
 const isAuthenticatedUser = (data) => {
-    return data.user.id === userProps.user.id
+    if(data.sender){
+        return data.sender_id === userProps.user.id
+    }else{
+        return data.user.id === userProps.user.id
+    }
 }
 
 const getImageUrl = (url) => {
@@ -236,7 +257,12 @@ const sendMessage = async () => {
                     formData.append(`attachments[${i}]`, file, file.name);
                 }
             }
-            await groupStore.sendGroupMessage(formData, currentGroupId.value)
+
+            if(recipient.value){
+                await groupStore.sendPrivateMessage(formData, recipient.value.id)
+            }else{
+                await groupStore.sendGroupMessage(formData, currentGroupId.value)
+            }
             newMessage.value = ""
             attachments.value = null
         } catch (error) {

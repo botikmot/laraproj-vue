@@ -17,17 +17,20 @@
 <script setup>
 import { useSocialStore } from '../../store/social';
 import { useGroupStore } from '../../store/group'
+import { useChatStore } from '../../store/chat';
 import PostsList from './PostsList.vue';
 import { onMounted } from 'vue'
 
 const socialStore = useSocialStore()
-const groupStore = useGroupStore()
+//const groupStore = useGroupStore()
+const chatStore = useChatStore()
 
 onMounted(async () => {
     const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
     socialStore.getScrollTop(scrollTop)
     await socialStore.getPosts()
-    await groupStore.subscribeToPusherChannels()
+    //await groupStore.subscribeToPusherChannels()
+    await chatStore.subscribeToPusherChannels()
 })
 
 </script>

@@ -73,7 +73,20 @@ const routes = [
         path: '/chat',
         name: 'chat',
         meta: { auth: true },
-        component: () => import('../components/chat/Dashboard.vue'),
+        //component: () => import('../components/chat/Dashboard.vue'),
+        component: () => import('../components/messages/ChatApp.vue'),
+    },
+    {
+        path: '/projects',
+        name: 'projects',
+        meta: { auth: true },
+        component: () => import('../components/projects/ProjectDashboard.vue')
+    },
+    {
+        path: '/projects/:id',
+        name: 'project-board',
+        meta: { auth: true },
+        component: () => import('../components/projects/Board.vue')
     },
 ];
 

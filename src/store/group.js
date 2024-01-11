@@ -12,6 +12,7 @@ export const useGroupStore = defineStore("group", {
         newAddedMessage: false,
         messageLoading: false,
         currentGroup: null,
+        recipient: null,
         groupMessagePage: 1,
         myGroup: null,
         privateMessages: [],
@@ -28,6 +29,8 @@ export const useGroupStore = defineStore("group", {
         groupId: (state) => state.currentGroup,
         group: (state) => state.myGroup,
         allLoaded: (state) => state.messagesAllLoaded,
+        myPrivateMessages: (state) => state.privateMessages,
+        recipientData: (state) => state.recipient
     },
     actions: {
         async createGroup(data) {
@@ -47,7 +50,6 @@ export const useGroupStore = defineStore("group", {
         async userGroups() {
             try {
                 const response = await axios.get('/api/groups')
-                console.log(response.data)
                 this.myGroups = response.data.groups 
                 return this.myGroups
             } catch (error) {
@@ -79,7 +81,7 @@ export const useGroupStore = defineStore("group", {
                 this.currentGroup = id
                 this.myGroup = this.myGroups.find(item => item.id === id)
             }
-
+            this.recipient = null
             try {
                 this.messageLoading = true
                 const response = await axios.get(`/api/group-messages/${id}?page=${this.groupMessagePage}`)
@@ -130,17 +132,7 @@ export const useGroupStore = defineStore("group", {
             }
         },
         addNewMessage(data, groupId){
-            const auth = useAuthStore()
-
-                const latest_read = {
-                    latest_message_id: data.id,
-                    user: auth.user
-                }
-
-                data.latest_read.push(latest_read)
-                //data.latest_read = latest_message_read
-                console.log('---received', data)
-
+            console.log('current group', this.currentGroup)
             if(this.currentGroup == groupId) {
                 this.groupMessages.unshift(data)
                 this.newAddedMessage = true
@@ -162,6 +154,17 @@ export const useGroupStore = defineStore("group", {
                 
             }
         },
+        addNewPrivateMessage(data, recipientId){
+            console.log('this.recipient.id', this.recipient.id)
+            console.log('recipientId', recipientId)
+            if(this.recipient.id == recipientId){
+                this.groupMessages.unshift(data)
+                this.newAddedMessage = true
+                setTimeout(() => {
+                    this.newAddedMessage = false
+                },2000)
+            }
+        },
         async sendPrivateMessage(data, id) {
             try {
                 const response = await axios.post(`/api/send-private-message/${id}`, data)
@@ -170,12 +173,50 @@ export const useGroupStore = defineStore("group", {
                 console.log(error)
             }
         },
-        async getPrivateMessages() {
+        async getRecipientMessages(user){
             try {
-                const response = await axios.get('/api/get-private-messages')
-                console.log('private messages', response)
+                this.myGroup = user
+                this.currentGroup = null
+                this.recipient = user
+                const response = await axios.get(`/api/get-recipient-messages/${user.id}`)
+                console.log('recipient messages', response.data)
+                this.groupMessages = response.data.recipientMessages.data
             } catch (error) {
                 console.log(error)
+                // Handle any errors here
+            }
+        },
+        async getPrivateMessages(){
+            try {
+                const response = await axios.get('/api/get-private-messages')
+                console.log('recipients', response.data.privateMessages)
+                this.privateMessages = response.data.privateMessages
+                return this.privateMessages
+            } catch (error) {
+                console.log(error)
+                // Handle any errors here
+                return []
+            }
+        },
+        async getRecipients(){
+            try {
+                const response = await axios.get('/api/get-recipients')
+                console.log('recipients', response.data.recipients)
+                this.privateMessages = response.data.recipients
+            } catch (error) {
+                console.log(error)
+                // Handle any errors here
+            }
+        },
+        async removeUserToGroupsActivity(id){
+            try {
+                const response = await axios.post('/api/remove-user-from-group-activity', { userId: id })
+                this.groupMessages = []
+                this.currentGroup = null
+                this.myGroup = null
+            } catch (error) {
+                console.log(error)
+                // Handle any errors here
             }
         },
         setOnlineStatus(data){
@@ -198,11 +239,60 @@ export const useGroupStore = defineStore("group", {
                     channel.bind('group-message', (data) => {
                         // Handle the received message here
                         // Add the message to the specific group
+                        let activeusers = []
+                        data.activeUsers.forEach(item =>{
+                            let dataUser = {
+                                user: item.user
+                            }
+                            if(item.user.id != data.message.user_id){
+                                activeusers.push(dataUser)
+                            }
+                        })
+
+                        data.message.latest_read = activeusers
+
+                        this.groupMessages.forEach(item => {
+                            item.latest_read = item.latest_read.filter(entry => {
+                                // Check if the user exists in the activeUsers array
+                                const userExistsInActiveUsers = activeusers.some(activeUser =>
+                                    activeUser.user.id === entry.user.id
+                                );
+                                // Keep the user if not in activeUsers
+                                return !userExistsInActiveUsers;
+                            });
+                        });
+
                         this.addNewMessage(data.message, data.groupId)
+                    });
+
+                    channel.bind('read-message', async (data) => {
+                        if(data.groupId == this.currentGroup && this.groupMessages.length > 0){
+                            const userExists = this.groupMessages[0].latest_read.some(entry =>
+                                entry.user.id === data.user.id
+                            );
+                            if (!userExists) {
+                                this.groupMessages[0].latest_read.push(data)
+                                this.groupMessages.slice(1).forEach(item => {
+                                    item.latest_read = item.latest_read.filter(entry => entry.user.id !== data.user.id);
+                                })
+                            }
+                        }
                     });
 
                     this.totalUnreads = this.totalUnreads + group.unread_messages.length
                 });
+
+                const privateGroups = await this.getPrivateMessages();
+                privateGroups.forEach(item => {
+                    //const privateChannelName = `recipient.${item.id}`;
+                    const privateChannel = pusher.subscribe('sender', 'recipient');
+                    //console.log('privateChannelName',privateChannelName)
+                    privateChannel.bind('private-message', (data) => {
+                        console.log('private message sent-->>>', data)
+                        this.addNewPrivateMessage(data.message, data.recipientId)
+                    })
+                })
+
                 if(this.totalUnreads > 0){
                     const result = document.title.includes('(')
                         ? document.title.split('(')[0].trim()

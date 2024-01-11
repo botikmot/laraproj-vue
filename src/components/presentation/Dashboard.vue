@@ -106,7 +106,7 @@ const submit = async () => {
     const promptText = `This is a presentation about ${topic.value}. You MUST answer in the topic's LANGUAGE and MUST have ${num_of_slides.value} slides. Each slide has a short title and a description of 1 sentence to 3 sentences in this format:
                 Title:
                 Description:`;
-    const apiURL = 'http://localhost:5000/openai'
+    const apiURL = 'http://192.168.1.25:5000/openai'
 
     try {
         const response = await axios.post(apiURL, {
@@ -169,7 +169,7 @@ const convertResponseToJSON = async (responseText) => {
 
 
 const generateImage = async (topic) => {
-    const apiURL = 'http://localhost:5000/generate-image'
+    const apiURL = 'http://192.168.1.25:5000/generate-image'
 
     const promptText = `Generate an image based on the subject for this topic: ${topic}.`
 
@@ -271,7 +271,7 @@ const downloadPresentation = async (data) => {
 }
 
 const fetchImageAsBase64 = async (url) => {
-    const apiURL = 'http://localhost:5000/image-convert?url=' + encodeURIComponent(url)
+    const apiURL = 'http://192.168.1.25:5000/image-convert?url=' + encodeURIComponent(url)
     try {
         const response = await axios.get(apiURL);
         return response.data

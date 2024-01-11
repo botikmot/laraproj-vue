@@ -71,20 +71,30 @@
                     nav
                     >
                     <v-list-item
-                        v-for="(item, i) in myGroups"
+                        v-for="(item, i) in privateMessages"
                         :key="i"
                         :value="item"
                         :title="item.name"
                         color="blue"
-                        :subtitle="getSubtitle(item)"
+                        @click="getRecipientMessages(item)"
+                        :subtitle="getRecipientSubtitle(item)"
                     >
                         <template v-slot:prepend>
-                            <v-avatar
+                            <v-badge dot bordered offset-x="2" offset-y="30" :color="`${item.online ? 'success' : ''}`">
+                                <v-avatar v-if="imagePath(item)" :image="imagePath(item)"></v-avatar>
+                                <v-avatar
+                                    v-else
+                                    color="info"
+                                    >
+                                    <span class="">{{ getInitials(item) }}</span>
+                                </v-avatar>
+                            </v-badge>
+                            <!-- <v-avatar
                                 size="small"
                                 color="info"
                                 >
                                 <span class="text-xs">{{ getGroupInitials(item) }}</span>
-                            </v-avatar>
+                            </v-avatar> -->
                         </template>
 
                     </v-list-item>
@@ -110,6 +120,14 @@ const profileImagePath = computed(() => {
     }
 })
 
+const imagePath = (user) => {
+    if(user.profile && user.profile.profile_photo){
+        return BASE_IMAGE_URL + user.profile.profile_photo;
+    }else{
+        return null
+    }
+}
+
 const messageLoading = computed(() => {
     return groupStore.loading
 })
@@ -118,8 +136,15 @@ const myGroups = computed(() => {
     return groupStore.groups
 })
 
+const privateMessages = computed(() => {
+    return groupStore.myPrivateMessages
+})
+
+const getRecipientMessages = async (user) => {
+    groupStore.getRecipientMessages(user)
+}
+
 const getInitials = () => {
-    console.log('user value', userProps.user)
     const words = userProps.user.name.split(' ')
     const initials = words.map(word => word.charAt(0).toUpperCase())
     return initials.join('')
@@ -137,6 +162,16 @@ const getSubtitle = (item) => {
         latestMessage = item.latest_message.content.substring(0, 25) + '..';
     }else{
         latestMessage = item.latest_message ? item.latest_message.content : ''
+    }
+    return latestMessage
+}
+
+const getRecipientSubtitle = (item) => {
+    let latestMessage = ''    
+    if (item.latest_message && item.latest_message.length > 25) {
+        latestMessage = item.latest_message.substring(0, 25) + '..';
+    }else{
+        latestMessage = item.latest_message ? item.latest_message : ''
     }
     return latestMessage
 }

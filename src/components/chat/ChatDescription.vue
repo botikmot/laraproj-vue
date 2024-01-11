@@ -41,6 +41,7 @@
                         :value="item"
                         :title="getName(item)"
                         color="blue"
+                        @click="getRecipientMessages(item)"
                         :subtitle="getPosition(item)"
                     >
                         <template v-slot:prepend>
@@ -89,6 +90,10 @@ const addMember = async () => {
         user_id: selected.value
     }
     await groupStore.addMember(data, currentGroupId.value)
+}
+
+const getRecipientMessages = async (user) => {
+    groupStore.getRecipientMessages(user)
 }
 
 const getPosition = (user) => {

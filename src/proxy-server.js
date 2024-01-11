@@ -17,7 +17,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-    origin: 'http://localhost:3000', // Replace with the origin of your Vue.js app
+    origin: 'http://49.149.87.60:3000', // Replace with the origin of your Vue.js app
     credentials: true,
   }));
 

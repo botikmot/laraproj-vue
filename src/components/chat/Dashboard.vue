@@ -39,13 +39,15 @@
 
 <script setup>
 import { useGroupStore } from '../../store/group'
-import { ref, onBeforeMount, onMounted, computed } from "vue"
+import { useChatStore } from '../../store/chat'
+import { ref, onBeforeMount, onMounted, computed, onBeforeUnmount } from "vue"
 import LeftSidebar from './MemberList.vue';
 import ChatContainer from './ChatContainer.vue';
 import ChatDescription from './ChatDescription.vue'
 import pusher from '../../pusher'
 
 const groupStore = useGroupStore()
+const chatStore = useChatStore()
 const user = ref(null)
 const sidebarVisible = ref(false)
 
@@ -53,12 +55,22 @@ const sidebarVisible = ref(false)
 const onlinechannel = pusher.subscribe('useronline-channel');
 onlinechannel.bind('online-users', (data) => {
     // Handle the received message here
-    groupStore.setOnlineStatus(data.user)
+    //groupStore.setOnlineStatus(data.user)
+    chatStore.setOnlineStatus(data.user)
 });
 
 const toggleSidebar = () => {
     sidebarVisible.value = !sidebarVisible.value
 }
+
+onBeforeUnmount(() => {
+    const userData = localStorage.getItem('user_data')
+    if(userData){
+        const user_data = JSON.parse(userData)
+        groupStore.removeUserToGroupsActivity(user_data.id)
+        console.log('Component onBeforeRouteLeave hook is called');
+    }
+})
 
 onBeforeMount(() => {
     const userData = localStorage.getItem('user_data')
@@ -66,6 +78,7 @@ onBeforeMount(() => {
         user.value = JSON.parse(userData)
     }
     groupStore.userGroups()
+    groupStore.getPrivateMessages()
 })
 
 onMounted(async () => {
